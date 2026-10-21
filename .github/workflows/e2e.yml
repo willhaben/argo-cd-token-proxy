@@ -32,7 +32,7 @@ jobs:
           kubectl create namespace argo-cd
           helm repo add argo https://argoproj.github.io/argo-helm
           helm upgrade --install argo-cd argo/argo-cd --version 10.10.5 \
-            --namespace argo-cd --values e2e/argo-cd-values.yaml --wait --timeout 10m
+            --namespace argo-cd --values e2e/argo-cd-values.yaml --wait --timeout 3m
 
       - name: Argo CD diagnostics
         if: failure()
