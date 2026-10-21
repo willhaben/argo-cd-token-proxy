@@ -1,3 +1,7 @@
+redis:
+  image:
+    repository: docker.io/library/redis
+
 configs:
   params:
     server.insecure: true
