@@ -27,6 +27,7 @@ The chosen field is logged by name; token values are never logged.
 | `ARGOCD_DEX_CLIENT_ID` | yes | | No default. The chart sets `argo-cd-cli`. |
 | `ARGOCD_DEX_CONNECTOR_ID` | yes | | No default. |
 | `LISTEN_ADDR` | no | `:8083` | |
+| `ARGOCD_DEX_DEBUG` | no | `false` | `true` logs the full body of a failed Dex token response. Successful responses are never logged. |
 
 The process refuses to start and names the variable if a required one is missing.
 
@@ -42,6 +43,10 @@ Basic auth.
 docker build -t argo-cd-token-proxy .
 go test ./...
 ```
+
+The e2e test (`e2e_test.go`, build tag `e2e`) needs a running Argo CD with a
+Dex Kubernetes connector. The `e2e` workflow starts kind, installs Argo CD from
+`e2e/argo-cd-values.yaml`, and runs it.
 
 Images are pushed to `ghcr.io/willhaben/argo-cd-token-proxy` by the
 `build-image` workflow on pushes to `main`, tagged with the commit SHA and `latest`.

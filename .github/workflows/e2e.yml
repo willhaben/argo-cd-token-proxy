@@ -1,0 +1,73 @@
+name: e2e
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  token-exchange:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: argo-cd-token-proxy-e2e
+
+      # Dex fetches the cluster's OIDC discovery document and JWKS anonymously.
+      - name: Allow anonymous service account issuer discovery
+        run: |
+          kubectl create clusterrolebinding oidc-discovery-anonymous \
+            --clusterrole=system:service-account-issuer-discovery \
+            --group=system:unauthenticated
+
+      - name: Install Argo CD with Dex
+        run: |
+          kubectl create namespace argo-cd
+          helm repo add argo https://argoproj.github.io/argo-helm
+          helm upgrade --install argo-cd argo/argo-cd --version 10.10.5 \
+            --namespace argo-cd --values e2e/argo-cd-values.yaml --wait --timeout 3m
+
+      - name: Argo CD diagnostics
+        if: failure()
+        run: |
+          kubectl get pods --namespace argo-cd --output wide
+          kubectl get events --namespace argo-cd --sort-by=.lastTimestamp
+          kubectl describe pods --namespace argo-cd
+
+      - name: Build proxy image and load it into kind
+        run: |
+          docker build -t argo-cd-token-proxy:e2e .
+          kind load docker-image argo-cd-token-proxy:e2e --name argo-cd-token-proxy-e2e
+
+      - name: Deploy proxy
+        run: |
+          kubectl apply --filename e2e/proxy.yaml
+          kubectl rollout status deployment/argo-cd-token-proxy --namespace argo-cd --timeout 2m
+
+      - name: Port-forward proxy
+        run: |
+          kubectl port-forward --namespace argo-cd svc/argo-cd-token-proxy 8083:8083 &
+          for _ in $(seq 30); do curl -s -o /dev/null http://localhost:8083/ && exit 0; sleep 2; done
+          exit 1
+
+      - name: Run proxy e2e test
+        env:
+          E2E_PROXY_URL: http://localhost:8083
+        run: go test -tags e2e -run TestE2EProxyCallsArgoCD -v -count=1 .
+
+      - name: Proxy logs
+        if: always()
+        run: kubectl logs deployment/argo-cd-token-proxy --namespace argo-cd
+
+      - name: Dex and Argo CD server logs
+        if: always()
+        run: |
+          kubectl logs deployment/argo-cd-argocd-dex-server --namespace argo-cd
+          kubectl logs deployment/argo-cd-argocd-server --namespace argo-cd

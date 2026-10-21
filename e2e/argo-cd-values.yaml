@@ -1,0 +1,36 @@
+redis:
+  image:
+    repository: docker.io/library/redis
+
+configs:
+  params:
+    server.insecure: true
+  rbac:
+    policy.default: role:readonly
+  cm:
+    url: http://localhost:8080
+    dex.config: |
+      connectors:
+        - type: oidc
+          id: kubernetes
+          name: Kubernetes
+          config:
+            issuer: https://kubernetes.default.svc.cluster.local
+            clientID: argo-cd-mcp
+            rootCAs: [/etc/dex/kube-ca/ca.crt]
+            userNameKey: sub
+            claimMapping:
+              email: sub
+            getUserInfo: false
+            insecureEnableGroups: true
+            insecureSkipEmailVerified: true
+
+dex:
+  volumes:
+    - name: kube-ca
+      configMap:
+        name: kube-root-ca.crt
+  volumeMounts:
+    - name: kube-ca
+      mountPath: /etc/dex/kube-ca
+      readOnly: true
