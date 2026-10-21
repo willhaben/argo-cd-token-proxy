@@ -27,6 +27,7 @@ The chosen field is logged by name; token values are never logged.
 | `ARGOCD_DEX_CLIENT_ID` | yes | | No default. The chart sets `argo-cd-cli`. |
 | `ARGOCD_DEX_CONNECTOR_ID` | yes | | No default. |
 | `LISTEN_ADDR` | no | `:8083` | |
+| `ARGOCD_DEX_DEBUG` | no | `false` | `true` logs the full body of a failed Dex token response. Successful responses are never logged. |
 
 The process refuses to start and names the variable if a required one is missing.
 

@@ -8,7 +8,8 @@ import (
 	"encoding/json/v2"
 	"errors"
 	"fmt"
-	"log"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -20,7 +21,7 @@ import (
 
 const (
 	tokenExchangeGrant = "urn:ietf:params:oauth:grant-type:token-exchange"
-	subjectTokenType   = "urn:ietf:params:oauth:token-type:jwt"
+	subjectTokenType   = "urn:ietf:params:oauth:token-type:id_token"
 	tokenScope         = "openid groups federated:id"
 	dexTokenPath       = "/api/dex/token"
 	exchangeTimeout    = 10 * time.Second
@@ -33,6 +34,7 @@ type config struct {
 	clientID    string
 	connectorID string
 	listenAddr  string
+	debug       bool
 }
 
 func loadConfig() (config, error) {
@@ -47,6 +49,7 @@ func loadConfig() (config, error) {
 		clientID:    os.Getenv("ARGOCD_DEX_CLIENT_ID"),
 		connectorID: os.Getenv("ARGOCD_DEX_CONNECTOR_ID"),
 		listenAddr:  cmp.Or(os.Getenv("LISTEN_ADDR"), ":8083"),
+		debug:       os.Getenv("ARGOCD_DEX_DEBUG") == "true",
 	}, nil
 }
 
@@ -95,6 +98,7 @@ type dexExchanger struct {
 	tokenFile   string
 	clientID    string
 	connectorID string
+	debug       bool
 }
 
 func newDexExchanger(cfg config) dexExchanger {
@@ -104,6 +108,7 @@ func newDexExchanger(cfg config) dexExchanger {
 		tokenFile:   cfg.tokenFile,
 		clientID:    cfg.clientID,
 		connectorID: cfg.connectorID,
+		debug:       cfg.debug,
 	}
 }
 
@@ -132,6 +137,10 @@ func (d dexExchanger) exchange(ctx context.Context) (dexToken, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		if d.debug {
+			body, _ := io.ReadAll(resp.Body)
+			return dexToken{}, fmt.Errorf("dex token request: status %d: %s", resp.StatusCode, body)
+		}
 		return dexToken{}, fmt.Errorf("dex token request: status %d", resp.StatusCode)
 	}
 
@@ -154,7 +163,7 @@ func (d dexExchanger) exchange(ctx context.Context) (dexToken, error) {
 	if token.Value == "" {
 		return dexToken{}, errors.New("dex token response has no token")
 	}
-	log.Printf("dex returned %s, valid for %s", token.Source, token.ExpiresIn)
+	slog.Info("dex returned token", "source", token.Source, "expires_in", token.ExpiresIn.String())
 	return token, nil
 }
 
@@ -163,7 +172,7 @@ func newProxy(target *url.URL, tokens *tokenCache) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, err := tokens.get(r.Context())
 		if err != nil {
-			log.Printf("dex token unavailable: %v", err)
+			slog.Error("dex token unavailable", "error", err)
 			http.Error(w, "upstream authentication unavailable", http.StatusBadGateway)
 			return
 		}
@@ -173,13 +182,14 @@ func newProxy(target *url.URL, tokens *tokenCache) http.Handler {
 }
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, nil)))
 	cfg, err := loadConfig()
 	if err != nil {
-		log.Fatal(err)
+		fatal(err)
 	}
 	target, err := url.Parse(cfg.baseURL)
 	if err != nil || target.Scheme == "" || target.Host == "" {
-		log.Fatalf("ARGOCD_BASE_URL must be an absolute URL, got %q", cfg.baseURL)
+		fatal(fmt.Errorf("ARGOCD_BASE_URL must be an absolute URL, got %q", cfg.baseURL))
 	}
 
 	tokens := &tokenCache{exchange: newDexExchanger(cfg).exchange, now: time.Now}
@@ -188,6 +198,11 @@ func main() {
 		Handler:           newProxy(target, tokens),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	log.Printf("listening on %s, proxying to %s", cfg.listenAddr, target.Redacted())
-	log.Fatal(server.ListenAndServe())
+	slog.Info("listening", "addr", cfg.listenAddr, "target", target.Redacted())
+	fatal(server.ListenAndServe())
+}
+
+func fatal(err error) {
+	slog.Error("proxy stopped", "error", err)
+	os.Exit(1)
 }

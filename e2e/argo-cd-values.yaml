@@ -19,6 +19,8 @@ configs:
             clientID: argo-cd-mcp
             rootCAs: [/etc/dex/kube-ca/ca.crt]
             userNameKey: sub
+            claimMapping:
+              email: sub
             getUserInfo: false
             insecureEnableGroups: true
             insecureSkipEmailVerified: true

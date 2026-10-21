@@ -65,3 +65,9 @@ jobs:
       - name: Proxy logs
         if: always()
         run: kubectl logs deployment/argo-cd-token-proxy --namespace argo-cd
+
+      - name: Dex and Argo CD server logs
+        if: always()
+        run: |
+          kubectl logs deployment/argo-cd-argocd-dex-server --namespace argo-cd
+          kubectl logs deployment/argo-cd-argocd-server --namespace argo-cd

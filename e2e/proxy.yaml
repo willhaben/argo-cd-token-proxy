@@ -34,6 +34,8 @@ spec:
               value: argo-cd-cli
             - name: ARGOCD_DEX_CONNECTOR_ID
               value: kubernetes
+            - name: ARGOCD_DEX_DEBUG
+              value: "true"
           ports:
             - containerPort: 8083
           volumeMounts:
