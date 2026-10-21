@@ -44,9 +44,17 @@ docker build -t argo-cd-token-proxy .
 go test ./...
 ```
 
-The e2e test (`e2e_test.go`, build tag `e2e`) needs a running Argo CD with a
-Dex Kubernetes connector. The `e2e` workflow starts kind, installs Argo CD from
-`e2e/argo-cd-values.yaml`, and runs it.
+The e2e suite (`test/e2e`, build tag `e2e`) creates a kind cluster, installs
+Argo CD with a Dex Kubernetes connector, deploys the proxy image, and runs the
+test against it. It needs `docker`, `kind`, `kubectl` and `helm` on the PATH:
+
+```sh
+go test -tags e2e -v -count=1 ./test/e2e/
+```
+
+The suite deletes the cluster it created. Set `E2E_KEEP_CLUSTER=true` to keep
+it for debugging. An existing cluster named `argo-cd-token-proxy-e2e` is reused
+and left alone.
 
 Images are pushed to `ghcr.io/willhaben/argo-cd-token-proxy` by the
 `build-image` workflow on pushes to `main`, tagged with the commit SHA and `latest`.
