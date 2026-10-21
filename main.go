@@ -22,7 +22,7 @@ import (
 const (
 	tokenExchangeGrant = "urn:ietf:params:oauth:grant-type:token-exchange"
 	subjectTokenType   = "urn:ietf:params:oauth:token-type:id_token"
-	tokenScope         = "openid groups federated:id"
+	tokenScope         = "openid groups federated:id audience:server:client_id:argo-cd-cli"
 	dexTokenPath       = "/api/dex/token"
 	exchangeTimeout    = 10 * time.Second
 	maxRefreshMargin   = time.Minute

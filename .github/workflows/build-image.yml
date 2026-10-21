@@ -3,7 +3,7 @@ name: build-image
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    tags: ["v*"]
 
 jobs:
   image:
@@ -27,6 +27,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/willhaben/argo-cd-token-proxy:${{ github.sha }}
             ghcr.io/willhaben/argo-cd-token-proxy:latest
             ${{ startsWith(github.ref, 'refs/tags/') && format('ghcr.io/willhaben/argo-cd-token-proxy:{0}', github.ref_name) || '' }}

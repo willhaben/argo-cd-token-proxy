@@ -6,10 +6,20 @@ configs:
   params:
     server.insecure: true
   rbac:
-    policy.default: role:readonly
+    policy.csv: |
+      g, system:serviceaccount:argo-cd:argo-cd-mcp, role:readonly
   cm:
     url: http://localhost:8080
     dex.config: |
+      staticClients:
+        - id: argo-cd-mcp
+          name: Argo CD MCP
+          public: true
+        - id: argo-cd-cli
+          name: Argo CD CLI
+          public: true
+          trustedPeers:
+            - argo-cd-mcp
       connectors:
         - type: oidc
           id: kubernetes
