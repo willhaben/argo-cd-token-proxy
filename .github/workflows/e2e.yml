@@ -34,6 +34,13 @@ jobs:
           helm upgrade --install argo-cd argo/argo-cd --version 10.10.5 \
             --namespace argo-cd --values e2e/argo-cd-values.yaml --wait --timeout 10m
 
+      - name: Argo CD diagnostics
+        if: failure()
+        run: |
+          kubectl get pods --namespace argo-cd --output wide
+          kubectl get events --namespace argo-cd --sort-by=.lastTimestamp
+          kubectl describe pods --namespace argo-cd
+
       - name: Build proxy image and load it into kind
         run: |
           docker build -t argo-cd-token-proxy:e2e .
