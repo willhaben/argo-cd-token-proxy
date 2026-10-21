@@ -15,6 +15,11 @@ configs:
         - id: argo-cd-mcp
           name: Argo CD MCP
           public: true
+        - id: argo-cd-cli
+          name: Argo CD CLI
+          public: true
+          trustedPeers:
+            - argo-cd-mcp
       connectors:
         - type: oidc
           id: kubernetes
