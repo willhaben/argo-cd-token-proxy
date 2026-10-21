@@ -1,6 +1,8 @@
 configs:
   params:
     server.insecure: true
+  rbac:
+    policy.default: role:readonly
   cm:
     url: http://localhost:8080
     dex.config: |
