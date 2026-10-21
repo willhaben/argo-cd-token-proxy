@@ -1,0 +1,53 @@
+name: e2e
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  token-exchange:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: helm/kind-action@v1
+
+      # Dex fetches the cluster's OIDC discovery document and JWKS anonymously.
+      - name: Allow anonymous service account issuer discovery
+        run: |
+          kubectl create clusterrolebinding oidc-discovery-anonymous \
+            --clusterrole=system:service-account-issuer-discovery \
+            --group=system:unauthenticated
+
+      - name: Install Argo CD with Dex
+        run: |
+          kubectl create namespace argo-cd
+          helm repo add argo https://argoproj.github.io/argo-helm
+          helm upgrade --install argo-cd argo/argo-cd --version 10.10.5 \
+            --namespace argo-cd --values e2e/argo-cd-values.yaml --wait --timeout 10m
+
+      - name: Create subject token for the proxy's service account
+        run: |
+          kubectl create serviceaccount argo-cd-mcp --namespace argo-cd
+          kubectl create token argo-cd-mcp --namespace argo-cd \
+            --audience argo-cd-mcp --duration 1h > "$RUNNER_TEMP/dex-subject-token"
+
+      - name: Port-forward Argo CD server
+        run: |
+          kubectl port-forward --namespace argo-cd svc/argo-cd-argocd-server 8080:80 &
+          for _ in $(seq 30); do curl -fsS http://localhost:8080/healthz && exit 0; sleep 2; done
+          exit 1
+
+      - name: Run token exchange e2e test
+        env:
+          ARGOCD_BASE_URL: http://localhost:8080
+          ARGOCD_DEX_TOKEN_FILE: ${{ runner.temp }}/dex-subject-token
+          ARGOCD_DEX_CLIENT_ID: argo-cd-cli
+          ARGOCD_DEX_CONNECTOR_ID: kubernetes
+        run: go test -tags e2e -run TestE2ETokenExchange -v -count=1 .

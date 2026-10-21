@@ -43,5 +43,9 @@ docker build -t argo-cd-token-proxy .
 go test ./...
 ```
 
+The e2e test (`e2e_test.go`, build tag `e2e`) needs a running Argo CD with a
+Dex Kubernetes connector. The `e2e` workflow starts kind, installs Argo CD from
+`e2e/argo-cd-values.yaml`, and runs it.
+
 Images are pushed to `ghcr.io/willhaben/argo-cd-token-proxy` by the
 `build-image` workflow on pushes to `main`, tagged with the commit SHA and `latest`.
