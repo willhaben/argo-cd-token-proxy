@@ -31,7 +31,7 @@ spec:
             - name: ARGOCD_DEX_TOKEN_FILE
               value: /var/run/secrets/dex-subject-token/token
             - name: ARGOCD_DEX_CLIENT_ID
-              value: argo-cd-cli
+              value: argo-cd-mcp
             - name: ARGOCD_DEX_CONNECTOR_ID
               value: kubernetes
             - name: ARGOCD_DEX_DEBUG

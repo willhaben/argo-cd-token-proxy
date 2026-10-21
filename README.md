@@ -24,7 +24,7 @@ The chosen field is logged by name; token values are never logged.
 | --- | --- | --- | --- |
 | `ARGOCD_BASE_URL` | yes | | e.g. `http://argo-cd-argocd-server.argo-cd.svc.cluster.local` |
 | `ARGOCD_DEX_TOKEN_FILE` | yes | | e.g. `/var/run/secrets/dex-subject-token/token` |
-| `ARGOCD_DEX_CLIENT_ID` | yes | | No default. The chart sets `argo-cd-cli`. |
+| `ARGOCD_DEX_CLIENT_ID` | yes | | No default. |
 | `ARGOCD_DEX_CONNECTOR_ID` | yes | | No default. |
 | `LISTEN_ADDR` | no | `:8083` | |
 | `ARGOCD_DEX_DEBUG` | no | `false` | `true` logs the full body of a failed Dex token response. Successful responses are never logged. |
