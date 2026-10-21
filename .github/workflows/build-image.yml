@@ -1,0 +1,32 @@
+name: build-image
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/willhaben/argo-cd-token-proxy:${{ github.sha }}
+            ghcr.io/willhaben/argo-cd-token-proxy:latest
+            ${{ startsWith(github.ref, 'refs/tags/') && format('ghcr.io/willhaben/argo-cd-token-proxy:{0}', github.ref_name) || '' }}
